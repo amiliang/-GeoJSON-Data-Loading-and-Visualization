@@ -12,22 +12,24 @@
             padding: 0;
         }
         
-        #container {
-            display: flex;
-            height: 100vh;
-            flex-direction: row;
-            align-items: stretch;
+        #map {
+            position: absolute;
+            top: 0;
+            bottom: 0;
+            width: 100%;
         }
         
         #side-panel {
-            flex-basis: 500px;
+            position: absolute;
+            top: 0;
+            right: 0;
+            width: 300px;
+            height: 100%;
+            background: rgba(255, 255, 255, 0.8);
+            padding: 20px;
             overflow-y: scroll;
         }
-        
-        #map {
-            flex-grow: 1;
-        }
-        
+
         button {
             margin-bottom: 10px;
         }
@@ -48,37 +50,39 @@
         tr:nth-child(even) {
             background-color: #f2f2f2;
         }
+
+        @media (max-width: 1024px) {
+            #side-panel {
+                display: none;
+            }
+        }
     </style>
 </head>
 <body>
-    <main id="container">
-        <div id="side-panel">
-            <h2>Earthquake List</h2>
-            <button>Sort by Magnitude</button>
-            <table>
-                <tr>
-                    <th>id</th>
-                    <th>magnitude</th>
-                    <th>timestamp</th>
-                </tr>
-            </table>
-        </div>
-        <div id="map"></div>
-    </main>
+    <div id="map"></div>
+    <div id="side-panel">
+        <h2>Earthquake List</h2>
+        <button id="sort-button">Sort by Magnitude</button>
+        <table id="earthquake-table">
+            <tr>
+                <th>id</th>
+                <th>magnitude</th>
+                <th>timestamp</th>
+            </tr>
+        </table>
+    </div>
     <script>
         mapboxgl.accessToken = 'pk.eyJ1IjoiYW1pbGlhbmciLCJhIjoiY2x5bnRmYThhMDlvNzJrcHBpbmZ4ODcxeSJ9.nitNbl6u-ci9bKIqsNAmvA';
         let map = new mapboxgl.Map({
             container: 'map', // container ID
-            style: 'mapbox://styles/mapbox/satellite-v9', // style URL
-            zoom: 5.5, // startinng zoom
+            style: 'mapbox://styles/mapbox/light-v10', // style URL
+            zoom: 5.5, // starting zoom
             center: [138, 38]
         });
 
         async function geojsonFetch() { 
             let response, earthquakes, japan, table;
 
-            // this is where i had problems with my geojson being found so i needed to change the skeleton
-            // code a bit to ensure my map loads the data properly
             response = await fetch('earthquakes.geojson');
             if (!response.ok) {
                 throw new Error(`HTTP error! status: ${response.status}`);
@@ -124,10 +128,9 @@
                     }
                 });
 
-                table = document.getElementsByTagName("table")[0];
+                table = document.getElementById("earthquake-table");
                 let row, cell1, cell2, cell3;
                 for (let i = 0; i < earthquakes.features.length; i++) {
-                    // Create an empty <tr> element and add it to the 1st position of the table:
                     row = table.insertRow(-1);
                     cell1 = row.insertCell(0);
                     cell2 = row.insertCell(1);
@@ -137,30 +140,17 @@
                     cell3.innerHTML = new Date(earthquakes.features[i].properties.time).toLocaleDateString("en-US");
                 }
 
-                let btn = document.getElementsByTagName("button")[0];
+                let btn = document.getElementById("sort-button");
                 btn.addEventListener('click', sortTable);
 
-                function sortTable(e) {
-                    let table, rows, switching, i, x, y, shouldSwitch;
-                    table = document.getElementsByTagName("table")[0];
-                    switching = true;
-                    while (switching) {
-                        switching = false;
-                        rows = table.rows;
-                        for (i = 1; i < (rows.length - 1); i++) {
-                            shouldSwitch = false;
-                            x = parseFloat(rows[i].getElementsByTagName("td")[1].innerHTML);
-                            y = parseFloat(rows[i + 1].getElementsByTagName("td")[1].innerHTML);
-                            if (x < y) {
-                                shouldSwitch = true;
-                                break;
-                            }
-                        }
-                        if (shouldSwitch) {
-                            rows[i].parentNode.insertBefore(rows[i + 1], rows[i]);
-                            switching = true;
-                        }
-                    }
+                function sortTable() {
+                    let rows = Array.from(table.rows).slice(1);
+                    rows.sort((rowA, rowB) => {
+                        let magA = parseFloat(rowA.cells[1].innerHTML);
+                        let magB = parseFloat(rowB.cells[1].innerHTML);
+                        return magB - magA;
+                    });
+                    rows.forEach(row => table.appendChild(row));
                 }
             });
         }
@@ -169,3 +159,4 @@
     </script>
 </body>
 </html>
+
